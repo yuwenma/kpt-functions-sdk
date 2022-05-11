@@ -74,7 +74,7 @@ func CheckResourceDuplication(rl *ResourceList) error {
 
 // ParseResourceList parses a ResourceList from the input byte array. This function can be used to parse either KRM fn input
 // or KRM fn output
-func ParseResourceList(in []byte) (*ResourceList, error) {
+func ParseResourceList(in []byte, selectors... Selector) (*ResourceList, error) {
 	rl := &ResourceList{}
 	rlObj, err := ParseKubeObject(in)
 	if err != nil {
@@ -105,8 +105,11 @@ func ParseResourceList(in []byte) (*ResourceList, error) {
 			return nil, fmt.Errorf("failed to extract objects from items: %w", err)
 		}
 		for i := range objectItems {
-			rl.Items = append(rl.Items, asKubeObject(objectItems[i]))
+				rl.Items = append(rl.Items, asKubeObject(objectItems[i]))
+			}
 		}
+		for _, selector := range selectors {
+			rl.Items = selector.Select(rl.Items)
 	}
 
 	// Parse Results. Results can be empty.

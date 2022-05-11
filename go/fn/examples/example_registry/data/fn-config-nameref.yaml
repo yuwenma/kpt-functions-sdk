@@ -1,0 +1,17 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: NameReference
+metadata:
+  name: nameref-fn-config
+  annotations:
+    config.kubernetes.io/local-config: true
+nameRef:
+- source:
+    apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: new-example
+  targets:
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      fieldSpec:
+        - spec.conversion.webhook.clientConfig.service.name

@@ -24,23 +24,16 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/kio"
 )
 
-type runnerProcessor struct {
-	fnRunner FunctionRunner
-}
-
-func (r runnerProcessor) Process(rl *ResourceList) (bool, error) {
-	r.fnRunner.Run(rl.FunctionConfig, rl.Items, &rl.Results)
-	return true, nil
-}
-
 // AsMain reads the resourceList in yaml format from stdin, evaluates the
 // function and write the updated resourceList in yaml to stdout. Errors if any
 // will be printed to stderr.
-func AsMain(input interface{}) error {
+func AsMain(input interface{}, selectors... Selector) error {
 	var p ResourceListProcessor
 	switch input.(type){
 	case FunctionRunner:
 		p = runnerProcessor{fnRunner: input.(FunctionRunner)}
+	case registry:
+		p = registryProcessor{registry: input.(registry)}
 	case ResourceListProcessorFunc:
 		p = input.(ResourceListProcessorFunc)
 	}
@@ -49,7 +42,7 @@ func AsMain(input interface{}) error {
 		if err != nil {
 			return fmt.Errorf("unable to read from stdin: %v", err)
 		}
-		out, err := Run(p, in)
+		out, err := Run(p, in, selectors...)
 		// If there is an error, we don't return the error immediately.
 		// We write out to stdout before returning any error.
 		_, outErr := os.Stdout.Write(out)
@@ -66,8 +59,8 @@ func AsMain(input interface{}) error {
 
 // Run evaluates the function. input must be a resourceList in yaml format. An
 // updated resourceList will be returned.
-func Run(p ResourceListProcessor, input []byte) (out []byte, err error) {
-	rl, err := ParseResourceList(input)
+func Run(p ResourceListProcessor, input []byte, selectors... Selector) (out []byte, err error) {
+	rl, err := ParseResourceList(input, selectors...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +77,10 @@ func Run(p ResourceListProcessor, input []byte) (out []byte, err error) {
 			case ErrSubObjectFields:
 				err = &t
 			case *ErrSubObjectFields:
+				err = t
+			case ErrContextEnd:
+				err = &t
+			case *ErrContextEnd:
 				err = t
 			default:
 				panic(v)

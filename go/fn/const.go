@@ -40,4 +40,10 @@ const (
 
 	// KptLocalConfig marks a KRM resource to be skipped from deploying to the cluster via `kpt live apply`.
 	KptLocalConfig = ConfigPrefix + "local-config"
+
+	OriginApiVersions = internalPrefix + "apiversions"
+	OriginKinds = internalPrefix + "kinds"
+	OriginNames = internalPrefix + "names"
+	OriginNamespaces = internalPrefix + "namespaces"
+
 )

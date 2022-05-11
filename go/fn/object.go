@@ -468,11 +468,17 @@ func NewFromTypedObject(v interface{}) (*KubeObject, error) {
 }
 
 // String serializes the object in yaml format.
-func (o *KubeObject) String() string {
+func (o *KubeObject) CompleteString() string {
 	doc := internal.NewDoc([]*yaml.Node{o.obj.Node()}...)
 	s, _ := doc.ToYAML()
 	return string(s)
 }
+
+func (o *KubeObject) String() string {
+	return fmt.Sprintf("Resource(apiVersion=%v, kind=%v, namespace=%v, name=%v)",
+		o.GetAPIVersion(), o.GetKind(), o.GetNamespace(), o.GetName())
+}
+
 
 // resourceIdentifier returns the resource identifier including apiVersion, kind,
 // namespace and name.
