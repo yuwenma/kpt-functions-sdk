@@ -24,10 +24,26 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/kio"
 )
 
+type runnerProcessor struct {
+	fnRunner FunctionRunner
+}
+
+func (r runnerProcessor) Process(rl *ResourceList) (bool, error) {
+	r.fnRunner.Run(rl.FunctionConfig, rl.Items, &rl.Results)
+	return true, nil
+}
+
 // AsMain reads the resourceList in yaml format from stdin, evaluates the
 // function and write the updated resourceList in yaml to stdout. Errors if any
 // will be printed to stderr.
-func AsMain(p ResourceListProcessor) error {
+func AsMain(input interface{}) error {
+	var p ResourceListProcessor
+	switch input.(type){
+	case FunctionRunner:
+		p = runnerProcessor{fnRunner: input.(FunctionRunner)}
+	case ResourceListProcessorFunc:
+		p = input.(ResourceListProcessorFunc)
+	}
 	err := func() error {
 		in, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
