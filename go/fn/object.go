@@ -633,9 +633,11 @@ func (o *KubeObject) GetKind() string {
 }
 
 func (o *KubeObject) SetKind(kind string) {
+	originKind := o.GetKind()
 	if err := o.SetNestedField(kind, "kind"); err != nil {
 		panic(fmt.Errorf("cannot set kind '%v': %v", kind, err))
 	}
+	o.UpdateOriginResId(originKind, o.GetNamespace(), o.GetName())
 }
 
 func (o *KubeObject) GetName() string {
@@ -644,14 +646,20 @@ func (o *KubeObject) GetName() string {
 }
 
 func (o *KubeObject) SetName(name string) {
+	originName := o.GetName()
 	if err := o.SetNestedField(name, "metadata", "name"); err != nil {
 		panic(fmt.Errorf("cannot set metadata name '%v': %v", name, err))
 	}
+	o.UpdateOriginResId(o.GetKind(), o.GetNamespace(), originName)
 }
 
 func (o *KubeObject) GetNamespace() string {
 	s, _, _ := o.obj.GetNestedString("metadata", "namespace")
 	return s
+}
+
+func IsNamespaceScoped(o *KubeObject) bool {
+	return o.IsNamespaceScoped()
 }
 
 // IsNamespaceScoped tells whether a k8s resource is namespace scoped. If the KubeObject resource is a customized, it
@@ -675,10 +683,12 @@ func (o *KubeObject) HasNamespace() bool {
 	return found
 }
 
-func (o *KubeObject) SetNamespace(name string) {
-	if err := o.SetNestedField(name, "metadata", "namespace"); err != nil {
-		panic(fmt.Errorf("cannot set namespace '%v': %v", name, err))
+func (o *KubeObject) SetNamespace(namespace string) {
+	originNamespace := o.GetNamespace()
+	if err := o.SetNestedField(namespace, "metadata", "namespace"); err != nil {
+		panic(fmt.Errorf("cannot set namespace '%v': %v", namespace, err))
 	}
+	o.UpdateOriginResId(o.GetKind(), originNamespace, o.GetName())
 }
 
 func (o *KubeObject) SetAnnotation(k, v string) {

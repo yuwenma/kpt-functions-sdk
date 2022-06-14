@@ -40,4 +40,20 @@ const (
 
 	// KptLocalConfig marks a KRM resource to be skipped from deploying to the cluster via `kpt live apply`.
 	KptLocalConfig = ConfigPrefix + "local-config"
+
+	// build annotations
+	BuildAnnotationPreviousKinds      = internalPrefix + "previousKinds"
+	BuildAnnotationPreviousNames      = internalPrefix + "previousNames"
+	BuildAnnotationPreviousNamespaces = internalPrefix + "previousNamespaces"
+
+	BuildAnnotationPrefixes          = internalPrefix + "prefixes"
+	BuildAnnotationSuffixes          = internalPrefix + "suffixes"
+	BuildAnnotationsRefBy            = internalPrefix + "refBy"
+	BuildAnnotationsGenBehavior      = internalPrefix + "generatorBehavior"
+	BuildAnnotationsGenAddHashSuffix = internalPrefix + "needsHashSuffix"
+
+	// the following are only for patches, to specify whether they can change names
+	// and kinds of their targets
+	BuildAnnotationAllowNameChange = internalPrefix + "allowNameChange"
+	BuildAnnotationAllowKindChange = internalPrefix + "allowKindChange"
 )

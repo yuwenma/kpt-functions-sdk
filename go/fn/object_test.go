@@ -455,3 +455,22 @@ metadata:
   labels:
     g: h`)
 }
+
+var originResource = []byte(`apiVersion: config.kubernetes.io/v1
+kind: ResourceList
+items:
+- apiVersion: v1
+  kind: Namespace
+  metadata: # kpt-merge: /example
+    name: example
+`)
+
+func TestUpdateOriginResId(t *testing.T) {
+	rl, _ := ParseResourceList(originResource)
+	o := rl.Items[0]
+	o.UpdateOriginResId("Namespace", "", "aaa")
+	if o.GetAnnotation(BuildAnnotationPreviousNames) != "aaa" {
+		t.Errorf("annotation %v expect %v got %v", BuildAnnotationPreviousNames, "aaa",
+			o.GetAnnotation(BuildAnnotationPreviousNames))
+	}
+}
