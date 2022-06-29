@@ -59,9 +59,9 @@ type ResourceList struct {
 
 // CheckResourceDuplication checks the GVKNN of resourceList.items to make sure they are unique. It returns errors if
 // found more than one resource having the same GVKNN.
-func CheckResourceDuplication(rl *ResourceList) error {
+func CheckResourceDuplication(items KubeObjects) error {
 	idMap := map[yaml.ResourceIdentifier]struct{}{}
-	for _, obj := range rl.Items {
+	for _, obj := range items {
 		id := obj.resourceIdentifier()
 		if _, ok := idMap[*id]; ok {
 			return fmt.Errorf("duplicate Resource(apiVersion=%v, kind=%v, Namespace=%v, Name=%v)",

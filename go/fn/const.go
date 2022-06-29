@@ -40,4 +40,7 @@ const (
 
 	// KptLocalConfig marks a KRM resource to be skipped from deploying to the cluster via `kpt live apply`.
 	KptLocalConfig = ConfigPrefix + "local-config"
+
+	KptUseOnlyPrefix   = "internal.kpt.dev/"
+	UpstreamIdentifier = KptUseOnlyPrefix + "upstream-identifier"
 )

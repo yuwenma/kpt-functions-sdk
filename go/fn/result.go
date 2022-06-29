@@ -22,6 +22,10 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+func WithResult(rl *ResourceList) *Context {
+	return &Context{results: &rl.Results}
+}
+
 // Context provides a series of functions to add `Result` to `ResourceList.Results`.
 type Context struct {
 	results *Results
