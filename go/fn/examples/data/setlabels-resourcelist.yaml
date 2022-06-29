@@ -10,3 +10,4 @@ functionConfig:
   kind: SetLabels
   metadata:
     name: setlabel-fn-config
+  owner: kpt

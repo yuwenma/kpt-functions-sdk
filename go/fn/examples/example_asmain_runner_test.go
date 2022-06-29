@@ -22,7 +22,7 @@ import (
 var _ fn.Runner = &SetLabels{}
 
 type SetLabels struct {
-	Labels map[string]string `json:"labels,omitempty"`
+	Owner string
 }
 
 // Run is the main function logic.
@@ -30,11 +30,9 @@ type SetLabels struct {
 // `items` is parsed from the STDIN "ResourceList.Items".
 // `functionConfig` is from the STDIN "ResourceList.FunctionConfig". The value has been assigned to the r.Labels
 //  the functionConfig is validated to have kind "SetLabels" and apiVersion "fn.kpt.dev/v1alpha1"
-func (r *SetLabels) Run(ctx *fn.Context, functionConfig *fn.KubeObject, items []*fn.KubeObject) {
+func (r *SetLabels) Run(ctx *fn.Context, functionConfig *fn.KubeObject, items fn.KubeObjects) {
 	for _, o := range items {
-		for k, newLabel := range r.Labels {
-			o.SetLabel(k, newLabel)
-		}
+		o.SetLabel("owner", r.Owner)
 	}
 	ctx.ResultInfo("updated labels", nil)
 }
@@ -54,6 +52,7 @@ func (r *SetLabels) Run(ctx *fn.Context, functionConfig *fn.KubeObject, items []
 //   kind: SetLabels
 //   metadata:
 //     name: setlabel-fn-config
+//   owner: kpt
 func Example_asMain() {
 	file, _ := os.Open("./data/setlabels-resourcelist.yaml")
 	defer file.Close()
@@ -70,11 +69,14 @@ func Example_asMain() {
 	//   kind: Service
 	//   metadata:
 	//     name: example
+	//     labels:
+	//       owner: kpt
 	// functionConfig:
 	//   apiVersion: fn.kpt.dev/v1alpha1
 	//   kind: SetLabels
 	//   metadata:
 	//     name: setlabel-fn-config
+	//   owner: kpt
 	// results:
 	// - message: updated labels
 	//   severity: info

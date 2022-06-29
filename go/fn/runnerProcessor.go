@@ -17,6 +17,7 @@ package fn
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type runnerProcessor struct {
@@ -38,10 +39,20 @@ func (r *runnerProcessor) config(ctx *Context, o *KubeObject) {
 	case o.IsGVK("", "v1", "ConfigMap"):
 		data := o.NestedStringMapOrDie("data")
 		fnRunnerElem := reflect.ValueOf(r.fnRunner).Elem()
-		for i := 0; i < fnRunnerElem.NumField(); i++ {
-			if fnRunnerElem.Field(i).Kind() == reflect.Map {
-				fnRunnerElem.Field(i).Set(reflect.ValueOf(data))
-				break
+		for k, v := range data {
+			lowerKey := strings.ToLower(k)
+			for i := 0; i < fnRunnerElem.NumField(); i++ {
+				switch fnRunnerElem.Field(i).Kind() {
+				case reflect.Map:
+					if "data" == strings.ToLower(fnRunnerElem.Type().Field(i).Name) {
+						fnRunnerElem.Field(i).Set(reflect.ValueOf(v))
+					}
+				case reflect.String:
+					if lowerKey == strings.ToLower(fnRunnerElem.Type().Field(i).Name) {
+						fnRunnerElem.Field(i).SetString(v)
+						break
+					}
+				}
 			}
 		}
 	case o.IsGVK("fn.kpt.dev", "v1alpha1", fnName):
