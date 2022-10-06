@@ -34,9 +34,9 @@ func updateReplicas(rl *fn.ResourceList) (bool, error) {
 		return false, fn.ErrMissingFnConfig{}
 	}
 	var replicas int
-	rl.FunctionConfig.GetOrDie(&replicas, "replicas")
+	rl.FunctionConfig.NestedResource(&replicas, "replicas")
 	for i := range rl.Items.Where(fn.IsGVK("apps", "v1", "Deployment")) {
-		rl.Items[i].SetOrDie(replicas, "spec", "replicas")
+		rl.Items[i].SetNestedField(replicas, "spec", "replicas")
 	}
 	return true, nil
 }

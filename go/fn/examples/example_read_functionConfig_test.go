@@ -32,7 +32,7 @@ func Example_bReadFunctionConfig() {
 
 func readFunctionConfig(rl *fn.ResourceList) (bool, error) {
 	var sr SetReplicas
-	rl.FunctionConfig.AsOrDie(&sr)
+	rl.FunctionConfig.As(&sr)
 	fn.Logf("desired replicas is %v\n", sr.DesiredReplicas)
 	return true, nil
 }

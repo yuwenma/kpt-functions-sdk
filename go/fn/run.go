@@ -32,10 +32,8 @@ func AsMain(input interface{}) error {
 	err := func() error {
 		var p ResourceListProcessor
 		switch input := input.(type) {
-		case Runner:
-			p = runnerProcessor{fnRunner: input}
-		case *Runner:
-			p = runnerProcessor{fnRunner: *input}
+		case runnerProcessor:
+			p = input
 		case ResourceListProcessorFunc:
 			p = input
 		default:
@@ -67,39 +65,6 @@ func Run(p ResourceListProcessor, input []byte) (out []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		// if we run into a panic, we still need to log the error to Results,
-		// and return the ResourceList and error.
-		v := recover()
-		if v != nil {
-			switch t := v.(type) {
-			case errKubeObjectFields:
-				err = &t
-			case *errKubeObjectFields:
-				err = t
-			case errSubObjectFields:
-				err = &t
-			case *errSubObjectFields:
-				err = t
-			case errResultEnd:
-				err = &t
-			case *errResultEnd:
-				err = t
-			case ErrAttemptToTouchUpstreamIdentifier:
-				err = &t
-			case *ErrAttemptToTouchUpstreamIdentifier:
-				err = t
-			case ErrInternalAnnotation:
-				err = &t
-			case *ErrInternalAnnotation:
-				err = t
-			default:
-				panic(v)
-			}
-			rl.LogResult(err)
-			out, _ = rl.ToYAML()
-		}
-	}()
 	success, fnErr := p.Process(rl)
 	out, yamlErr := rl.ToYAML()
 	if yamlErr != nil {

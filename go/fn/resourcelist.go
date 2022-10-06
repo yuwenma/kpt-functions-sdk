@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/GoogleContainerTools/kpt-functions-sdk/go/fn/internal"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -55,6 +56,7 @@ type ResourceList struct {
 	// Validating functions can optionally use this field to communicate structured
 	// validation error data to downstream functions.
 	Results Results `yaml:"results,omitempty" json:"results,omitempty"`
+	ctx     Context
 }
 
 // CheckResourceDuplication checks the GVKNN of resourceList.items to make sure they are unique. It returns errors if
@@ -128,9 +130,13 @@ func ParseResourceList(in []byte) (*ResourceList, error) {
 // toYNode converts the ResourceList to the yaml.Node representation.
 func (rl *ResourceList) toYNode() (*yaml.Node, error) {
 	reMap := internal.NewMap(nil)
-	reObj := &KubeObject{SubObject{reMap}}
-	reObj.SetAPIVersion(kio.ResourceListAPIVersion)
-	reObj.SetKind(kio.ResourceListKind)
+	reObj := &KubeObject{SubObject{obj: reMap, parentGVK: schema.GroupVersionKind{}, fieldpath: ""}}
+	if err := reObj.SetAPIVersion(kio.ResourceListAPIVersion); err != nil {
+		return nil, err
+	}
+	if err := reObj.SetKind(kio.ResourceListKind); err != nil {
+		return nil, err
+	}
 
 	if rl.Items != nil && len(rl.Items) > 0 {
 		itemsSlice := internal.NewSliceVariant()
@@ -235,8 +241,8 @@ func (rl *ResourceList) LogResult(err error) {
 		return
 	}
 	switch result := err.(type) {
-	case Results:
-		rl.Results = append(rl.Results, result...)
+	case *Results:
+		rl.Results = append(rl.Results, *result...)
 	case Result:
 		rl.Results = append(rl.Results, &result)
 	case *Result:
@@ -308,8 +314,8 @@ func ApplyFnBySelector(rl *ResourceList, selector func(obj *KubeObject) bool, fn
 			continue
 		}
 		switch te := err.(type) {
-		case Results:
-			results = append(results, te...)
+		case *Results:
+			results = append(results, *te...)
 		case *Result:
 			results = append(results, te)
 		default:
@@ -318,7 +324,7 @@ func ApplyFnBySelector(rl *ResourceList, selector func(obj *KubeObject) bool, fn
 	}
 	if len(results) > 0 {
 		rl.Results = results
-		return results
+		return &results
 	}
 	return nil
 }

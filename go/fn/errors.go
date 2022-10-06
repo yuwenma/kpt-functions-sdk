@@ -19,6 +19,8 @@ import (
 	"strings"
 )
 
+const pathDelimitor = "."
+
 // ErrMissingFnConfig raises error if a required functionConfig is missing.
 type ErrMissingFnConfig struct{}
 
@@ -26,36 +28,23 @@ func (ErrMissingFnConfig) Error() string {
 	return "unable to find the functionConfig in the resourceList"
 }
 
-// errKubeObjectFields raises if the KubeObject operation panics.
-type errKubeObjectFields struct {
-	obj    *KubeObject
-	fields []string
-}
-
-func (e *errKubeObjectFields) Error() string {
-	return fmt.Sprintf("Resource(apiVersion=%v, kind=%v, Name=%v) has unmatched field type: `%v",
-		e.obj.GetAPIVersion(), e.obj.GetKind(), e.obj.GetName(), strings.Join(e.fields, "/"))
+func NewErrUnmatchedField(obj SubObject, fields []string, dt any) *ErrUnmatchedField {
+	relativefields := strings.Join(fields, pathDelimitor)
+	obj.fieldpath += pathDelimitor + relativefields
+	return &ErrUnmatchedField{
+		SubObject: &obj, DataType: fmt.Sprintf("%T", dt),
+	}
 }
 
 // errSubObjectFields raises if the SubObject operation panics.
-type errSubObjectFields struct {
-	fields []string
+type ErrUnmatchedField struct {
+	SubObject *SubObject
+	DataType  string
 }
 
-func (e *errSubObjectFields) Error() string {
-	return fmt.Sprintf("SubObject has unmatched field type: `%v", strings.Join(e.fields, "/"))
-}
-
-type errResultEnd struct {
-	obj     *KubeObject
-	message string
-}
-
-func (e *errResultEnd) Error() string {
-	if e.obj != nil {
-		return fmt.Sprintf("function is terminated by %v: %v", e.obj.ShortString(), e.message)
-	}
-	return fmt.Sprintf("function is terminated: %v", e.message)
+func (e *ErrUnmatchedField) Error() string {
+	return fmt.Sprintf("Resource(apiVersion=%v, kind=%v) has unmatched field type %q in fieldpath %v",
+		e.SubObject.parentGVK.GroupVersion(), e.SubObject.parentGVK.Kind, e.DataType, e.SubObject.fieldpath)
 }
 
 type ErrAttemptToTouchUpstreamIdentifier struct{}

@@ -432,22 +432,22 @@ func TestGetNestedFields(t *testing.T) {
 	rl, _ := ParseResourceList(deploymentResourceList)
 	deployment := rl.Items[0]
 	// Style 1, using concatenated fields in  NestedType function.
-	if intVal := deployment.NestedInt64OrDie("spec", "replicas"); intVal != 3 {
+	if intVal, _, _ := deployment.NestedInt64("spec", "replicas"); intVal != 3 {
 		t.Errorf("deployment .spec.replicas expected to be 3, got %v", intVal)
 	}
-	if boolVal := deployment.NestedBoolOrDie("spec", "paused"); boolVal != true {
+	if boolVal, _, _ := deployment.NestedBool("spec", "paused"); boolVal != true {
 		t.Errorf("deployment .spec.paused expected to be true, got %v", boolVal)
 	}
-	if stringVal := deployment.NestedStringOrDie("spec", "strategy", "type"); stringVal != "Recreate" {
+	if stringVal, _, _ := deployment.NestedString("spec", "strategy", "type"); stringVal != "Recreate" {
 		t.Errorf("deployment .spec.strategy.type expected to be `Recreate`, got %v", stringVal)
 	}
-	if stringMapVal := deployment.NestedStringMapOrDie("spec", "template", "spec", "nodeSelector"); !reflect.DeepEqual(stringMapVal, map[string]string{"disktype": "ssd"}) {
+	if stringMapVal, _, _ := deployment.NestedStringMap("spec", "template", "spec", "nodeSelector"); !reflect.DeepEqual(stringMapVal, map[string]string{"disktype": "ssd"}) {
 		t.Errorf("deployment .spec.template.spec.nodeSelector expected to get {`disktype`: `ssd`}, got %v", stringMapVal)
 	}
-	if sliceVal := deployment.NestedSliceOrDie("spec", "template", "spec", "containers"); sliceVal[0].NestedStringOrDie("name") != "nginx" {
-		t.Errorf("deployment .spec.template.spec.containers[0].name expected to get `nginx`, got %v", sliceVal[0].NestedStringOrDie("name"))
+	if sliceVal, _, _ := deployment.NestedSlice("spec", "template", "spec", "containers"); sliceVal[0].GetString("name") != "nginx" {
+		t.Errorf("deployment .spec.template.spec.containers[0].name expected to get `nginx`, got %v", sliceVal[0].GetString("name"))
 	}
-	if stringSliceVal := deployment.NestedStringSliceOrDie("spec", "fakeStringSlice"); !reflect.DeepEqual(stringSliceVal, []string{"test1", "test2"}) {
+	if stringSliceVal, _, _ := deployment.NestedStringSlice("spec", "fakeStringSlice"); !reflect.DeepEqual(stringSliceVal, []string{"test1", "test2"}) {
 		t.Errorf("deployment .spec.fakeStringSlice expected to get [`test1`, `test2`], got %v", stringSliceVal)
 	}
 	// Style 2, get each struct layer by type.
@@ -466,22 +466,22 @@ func TestGetNestedFields(t *testing.T) {
 		t.Errorf("deployment .spec.template.spec.nodeSelector expected to get {`disktype`: `ssd`}, got %v", stringMapVal.GetString("disktype"))
 	}
 	if sliceVal := tmplSpec.GetSlice("containers"); sliceVal[0].GetString("name") != "nginx" {
-		t.Errorf("deployment .spec.template.spec.containers[0].name expected to get `nginx`, got %v", sliceVal[0].NestedStringOrDie("name"))
+		t.Errorf("deployment .spec.template.spec.containers[0].name expected to get `nginx`, got %v", sliceVal[0].GetString("name"))
 	}
 }
 
 func TestSetNestedFields(t *testing.T) {
 	o := NewEmptyKubeObject()
-	o.SetNestedStringOrDie("some starlark script...", "source")
-	if stringVal := o.NestedStringOrDie("source"); stringVal != "some starlark script..." {
+	o.SetNestedString("some starlark script...", "source")
+	if stringVal, _, _ := o.NestedString("source"); stringVal != "some starlark script..." {
 		t.Errorf("KubeObject .source expected to get \"some starlark script...\", got %v", stringVal)
 	}
-	o.SetNestedStringMapOrDie(map[string]string{"tag1": "abc", "tag2": "test1"}, "tags")
-	if stringMapVal := o.NestedStringOrDie("tags", "tag2"); stringMapVal != "test1" {
+	o.SetNestedStringMap(map[string]string{"tag1": "abc", "tag2": "test1"}, "tags")
+	if stringMapVal, _, _ := o.NestedString("tags", "tag2"); stringMapVal != "test1" {
 		t.Errorf("KubeObject .tags.tag2 expected to get `test1`, got %v", stringMapVal)
 	}
-	o.SetNestedStringSliceOrDie([]string{"lable1", "lable2"}, "labels")
-	if stringSliceVal := o.NestedStringSliceOrDie("labels"); !reflect.DeepEqual(stringSliceVal, []string{"lable1", "lable2"}) {
+	o.SetNestedStringSlice([]string{"lable1", "lable2"}, "labels")
+	if stringSliceVal, _, _ := o.NestedStringSlice("labels"); !reflect.DeepEqual(stringSliceVal, []string{"lable1", "lable2"}) {
 		t.Errorf("KubeObject .labels expected to get [`lable1`, `lable2`], got %v", stringSliceVal)
 	}
 }
@@ -489,8 +489,8 @@ func TestSetNestedFields(t *testing.T) {
 func TestInternalAnnotationsUntouchable(t *testing.T) {
 	o := NewEmptyKubeObject()
 	// Verify the "upstream-identifier" annotation cannot be changed via SetNestedStringMap
-	o.SetNestedStringMapOrDie(map[string]string{"owner": "kpt"}, "metadata", "annotations")
-	if stringMapVal := o.NestedStringMapOrDie("metadata", "annotations"); !reflect.DeepEqual(stringMapVal, map[string]string{"owner": "kpt"}) {
+	o.SetNestedStringMap(map[string]string{"owner": "kpt"}, "metadata", "annotations")
+	if stringMapVal, _, _ := o.NestedStringMap("metadata", "annotations"); !reflect.DeepEqual(stringMapVal, map[string]string{"owner": "kpt"}) {
 		t.Errorf("annotations cannot be set via SetNestedStringMap, got %v", stringMapVal)
 	}
 	err := o.SetNestedStringMap(map[string]string{UpstreamIdentifier: "apps|Deployment|default|dp"}, "metadata", "annotations")
@@ -503,13 +503,10 @@ func TestInternalAnnotationsUntouchable(t *testing.T) {
 	if o.GetAnnotation("owner") != "kpt" {
 		t.Errorf("annotations cannot be set via SetAnnotation(), got %v", o.GetAnnotation("owner"))
 	}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("set internal annotation via SetAnnotation() expect panic (%v), got pass",
-				ErrAttemptToTouchUpstreamIdentifier{})
-		}
-	}()
-	o.SetAnnotation(UpstreamIdentifier, "apps|Deployment|default|dp")
+	if err = o.SetAnnotation(UpstreamIdentifier, "apps|Deployment|default|dp"); err == nil {
+		t.Errorf("set internal annotation via SetAnnotation() expect panic (%v), got pass",
+			ErrAttemptToTouchUpstreamIdentifier{})
+	}
 
 	// Verify the "upstream-identifier" annotation cannot be changed via SetNestedField
 	err = o.SetNestedField(map[string]string{UpstreamIdentifier: "apps|Deployment|default|dp"}, "metadata", "annotations")

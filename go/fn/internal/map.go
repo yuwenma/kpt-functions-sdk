@@ -17,11 +17,92 @@ package internal
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"sort"
 
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
+
+// Get gets the value for a nested field located by fields. A pointer must be
+// passed in, and the value will be stored in ptr. ptr can be a concrete type
+// (e.g. string, []corev1.Container, []string, corev1.Pod, map[string]string) or
+// a yaml.RNode. yaml.RNode should be used if you are dealing with comments that
+// is more than what LineComment, HeadComment, SetLineComment and
+// SetHeadComment can handle. It returns if the field is found and a
+// potential error.
+func (m *MapVariant) Get(ptr interface{}, fields ...string) (bool, error) {
+	found, err := func() (bool, error) {
+		if ptr == nil || reflect.ValueOf(ptr).Kind() != reflect.Ptr {
+			return false, fmt.Errorf("ptr must be a pointer to an object")
+		}
+
+		if rn, ok := ptr.(*yaml.RNode); ok {
+			val, found, err := m.GetNestedValue(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			rn.SetYNode(val.Node())
+			return found, err
+		}
+		switch k := reflect.TypeOf(ptr).Elem().Kind(); k {
+		case reflect.Struct, reflect.Map:
+			m, found, err := m.GetNestedMap(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			err = m.Node().Decode(ptr)
+			return found, err
+		case reflect.Slice:
+			s, found, err := m.GetNestedSlice(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			err = s.Node().Decode(ptr)
+			return found, err
+
+		case reflect.String:
+			s, found, err := m.GetNestedString(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			*(ptr.(*string)) = s
+			return found, nil
+
+		case reflect.Int, reflect.Int64:
+			i, found, err := m.GetNestedInt(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			if k == reflect.Int {
+				*(ptr.(*int)) = i
+			} else if k == reflect.Int64 {
+				*(ptr.(*int64)) = int64(i)
+			}
+			return found, nil
+		case reflect.Float64:
+			f, found, err := m.GetNestedFloat(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			*(ptr.(*float64)) = f
+			return found, nil
+		case reflect.Bool:
+			b, found, err := m.GetNestedBool(fields...)
+			if err != nil || !found {
+				return found, err
+			}
+			*(ptr.(*bool)) = b
+			return found, nil
+		default:
+			return false, fmt.Errorf("unhandled kind %s", k)
+		}
+	}()
+	if err != nil {
+		return found, fmt.Errorf("unable to get fields %v as %T with error: %w", fields, ptr, err)
+	}
+	return found, nil
+}
 
 func NewMap(node *yaml.Node) *MapVariant {
 	if node == nil {
